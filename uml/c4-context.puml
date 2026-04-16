@@ -1,0 +1,31 @@
+@startuml C4_Context_Clinic
+title C4 Level 1 - Context Diagram (АИС "Клиника")
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+
+actor "Пациент" as patient
+actor "Регистратор" as registrar
+actor "Врач" as doctor
+actor "Администратор системы" as admin
+
+rectangle "АИС \"Клиника\"\n[System]" as clinic
+rectangle "Сервис уведомлений (Email/SMS)\n[External System]" as notify
+
+patient --> clinic : Самозапись, просмотр визитов\nи результатов анализов
+registrar --> clinic : Регистрация пациентов,\nуправление расписанием и записью
+doctor --> clinic : Ведение приемов,\nдиагнозов, назначений
+admin --> clinic : Управление пользователями,\nролями и настройками
+
+clinic --> notify : Отправка уведомлений\nо записи/отмене/переносе
+
+note bottom of clinic
+  Границы системы:
+  - Frontend SPA
+  - Backend API
+  - PostgreSQL
+end note
+
+@enduml

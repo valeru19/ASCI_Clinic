@@ -1,0 +1,67 @@
+@startuml C4_Component_Backend_Clinic
+title C4 Level 3 - Backend Component Diagram (слоистая архитектура)
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+
+rectangle "Frontend SPA [External]" as frontend
+database "PostgreSQL [External]" as db
+rectangle "Сервис уведомлений [External]" as notify
+
+rectangle "Backend API (FastAPI) [Container]" as backend {
+  package "Presentation Layer" {
+    component "REST Controllers\n<<Facade>>" as controllers
+    component "Auth API\n<<Facade>>" as authapi
+  }
+
+  package "Application Layer" {
+    component "Application Services\n(Use Cases)" as appsvc
+    component "RBAC Policy Service\n<<Strategy>>" as rbac
+  }
+
+  package "Domain Layer" {
+    component "Domain Model\n(Entities, Value Objects)" as domain
+    component "Domain Services" as domainsvc
+    interface "Repository Interfaces" as repo_if
+  }
+
+  package "Infrastructure Layer" {
+    component "SQLAlchemy Repositories\n<<Adapter>>" as repo_impl
+    component "Repository Factory\n<<Factory Method>>" as repo_factory
+    component "Unit of Work" as uow
+    component "Notification Adapter\n<<Adapter>>" as notify_adapter
+  }
+}
+
+frontend --> controllers : REST/JSON
+frontend --> authapi : Login / refresh
+
+controllers --> appsvc
+authapi --> appsvc
+appsvc --> rbac
+appsvc --> domainsvc
+domainsvc --> domain
+appsvc --> repo_if
+
+repo_factory --> repo_if : Создает реализации
+repo_impl ..|> repo_if
+appsvc --> uow : Транзакционный сценарий
+uow --> repo_impl
+repo_impl --> db : SQLAlchemy / SQL
+
+appsvc --> notify_adapter : Событие домена
+notify_adapter --> notify : REST/SMTP
+
+note right of backend
+  Убраны лишние "модуль-на-сущность" блоки.
+  Оставлены только архитектурные компоненты.
+  Основные GoF-паттерны:
+  - Facade (API)
+  - Strategy (RBAC политики)
+  - Factory Method (создание репозиториев)
+  - Adapter (интеграции и ORM-реализации)
+end note
+
+@enduml

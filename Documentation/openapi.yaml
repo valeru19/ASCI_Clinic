@@ -1,0 +1,2274 @@
+openapi: 3.0.3
+info:
+  title: AIS Clinic API
+  version: 1.0.0
+  description: OpenAPI-описание ключевых эндпоинтов АИС "Клиника"
+
+servers:
+  - url: https://api.clinic.local
+    description: Production
+  - url: http://localhost:8000
+    description: Local development
+
+tags:
+  - name: Auth
+  - name: Doctors
+  - name: Patients
+  - name: Schedules
+  - name: Appointments
+  - name: Visits
+  - name: Laboratory
+  - name: Reports
+
+security:
+  - bearerAuth: []
+
+paths:
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Аутентификация пользователя
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginFormRequest'
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Получить текущего пользователя по JWT
+      responses:
+        '200':
+          description: Текущий пользователь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CurrentUserResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Пользователь неактивен или не имеет доступа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/doctors:
+    post:
+      tags: [Doctors]
+      summary: Создание врача (кадровый контур)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorCreateRequest'
+      responses:
+        '201':
+          description: Врач создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/doctors/{doctor_id}/employment:
+    patch:
+      tags: [Doctors]
+      summary: Обновить кадровые параметры врача (оклад/премия/статус)
+      parameters:
+        - in: path
+          name: doctor_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DoctorEmploymentUpdateRequest'
+      responses:
+        '200':
+          description: Параметры врача обновлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorListItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/specialties:
+    get:
+      tags: [Doctors]
+      summary: Список специализаций врачей
+      responses:
+        '200':
+          description: Справочник специализаций
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpecialtyListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Конфликт уникальных полей (username/email/license)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Doctors]
+      summary: Список врачей для UI и фильтров
+      parameters:
+        - in: query
+          name: include_inactive
+          schema:
+            type: boolean
+            default: false
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Список врачей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/patients:
+    post:
+      tags: [Patients]
+      summary: Регистрация пациента
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientCreateRequest'
+      responses:
+        '201':
+          description: Пациент создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Patients]
+      summary: Поиск пациентов
+      parameters:
+        - in: query
+          name: q
+          schema:
+            type: string
+            maxLength: 255
+        - in: query
+          name: birth_date
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: include_inactive
+          schema:
+            type: boolean
+            default: false
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Список пациентов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/patients/{patient_id}:
+    get:
+      tags: [Patients]
+      summary: Карточка пациента
+      parameters:
+        - in: path
+          name: patient_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Пациент
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [Patients]
+      summary: Обновление данных пациента
+      parameters:
+        - in: path
+          name: patient_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientUpdateRequest'
+      responses:
+        '200':
+          description: Обновлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags: [Patients]
+      summary: Деактивация пациента (soft delete)
+      parameters:
+        - in: path
+          name: patient_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Деактивирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/schedules:
+    post:
+      tags: [Schedules]
+      summary: Создание расписания врача
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleCreateRequest'
+      responses:
+        '201':
+          description: Расписание создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Schedules]
+      summary: Список расписаний
+      parameters:
+        - in: query
+          name: doctor_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: weekday
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 7
+        - in: query
+          name: include_inactive
+          schema:
+            type: boolean
+            default: false
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Список расписаний
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/schedule-slots/generate:
+    post:
+      tags: [Schedules]
+      summary: Генерация временных слотов по расписанию
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleSlotGenerateRequest'
+      responses:
+        '201':
+          description: Слоты созданы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleSlotGenerateResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/schedule-slots:
+    get:
+      tags: [Schedules]
+      summary: Просмотр слотов по врачу и диапазону дат
+      parameters:
+        - in: query
+          name: doctor_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: date_from
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: date_to
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [available, booked, blocked, cancelled]
+            default: available
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Список слотов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleSlotListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/schedule-exceptions:
+    post:
+      tags: [Schedules]
+      summary: Создание исключения расписания (отпуск/больничный)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleExceptionCreateRequest'
+      responses:
+        '201':
+          description: Исключение создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleExceptionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/appointments:
+    post:
+      tags: [Appointments]
+      summary: Запись пациента на прием
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreateRequest'
+      responses:
+        '201':
+          description: Запись создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Appointments]
+      summary: Получить список записей
+      parameters:
+        - in: query
+          name: doctor_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: patient_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [planned, confirmed, cancelled, completed, no_show]
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Список записей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/appointments/{appointment_id}/cancel:
+    patch:
+      tags: [Appointments]
+      summary: Отмена записи
+      parameters:
+        - in: path
+          name: appointment_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCancelRequest'
+      responses:
+        '200':
+          description: Запись отменена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/appointments/{appointment_id}/reschedule:
+    patch:
+      tags: [Appointments]
+      summary: Перенос записи на другой слот
+      parameters:
+        - in: path
+          name: appointment_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentRescheduleRequest'
+      responses:
+        '200':
+          description: Запись перенесена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/visits:
+    post:
+      tags: [Visits]
+      summary: Создать визит по записи
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitCreateRequest'
+      responses:
+        '201':
+          description: Визит создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Visits]
+      summary: Список визитов с фильтрами
+      parameters:
+        - in: query
+          name: doctor_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: patient_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [in_progress, completed, cancelled]
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Список визитов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/visits/{visit_id}:
+    get:
+      tags: [Visits]
+      summary: Получить визит по id
+      parameters:
+        - in: path
+          name: visit_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Визит
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/visits/{visit_id}/complete:
+    patch:
+      tags: [Visits]
+      summary: Завершить визит
+      parameters:
+        - in: path
+          name: visit_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitCompleteRequest'
+      responses:
+        '200':
+          description: Визит завершен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VisitResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/visits/{visit_id}/diagnoses:
+    post:
+      tags: [Visits]
+      summary: Добавить диагнозы к визиту
+      description: |
+        RBAC-правила:
+        - admin может назначать диагнозы любому визиту в любом статусе;
+        - doctor может назначать диагнозы только визитам своих пациентов и только после завершения приема (`appointment=completed` и `visit=completed`).
+      parameters:
+        - in: path
+          name: visit_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DiagnosesCreateRequest'
+      responses:
+        '201':
+          description: Диагнозы добавлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosesCreateResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/visits/{visit_id}/prescriptions:
+    post:
+      tags: [Visits]
+      summary: Добавить назначения к визиту
+      parameters:
+        - in: path
+          name: visit_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrescriptionsCreateRequest'
+      responses:
+        '201':
+          description: Назначения добавлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericCreateResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/visits/{visit_id}/referrals:
+    post:
+      tags: [Visits]
+      summary: Добавить направления к визиту
+      parameters:
+        - in: path
+          name: visit_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferralsCreateRequest'
+      responses:
+        '201':
+          description: Направления добавлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReferralsCreateResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/labs/orders:
+    post:
+      tags: [Laboratory]
+      summary: Создать лабораторное направление по визиту
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabOrderCreateRequest'
+      responses:
+        '201':
+          description: Направление создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabOrderResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/labs/orders/{order_id}/items:
+    post:
+      tags: [Laboratory]
+      summary: Добавить тесты в лабораторное направление
+      parameters:
+        - in: path
+          name: order_id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabOrderItemsCreateRequest'
+      responses:
+        '201':
+          description: Тесты добавлены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabOrderItemsCreateResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/v1/labs/results:
+    post:
+      tags: [Laboratory]
+      summary: Внести результат анализа
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LabResultCreateRequest'
+      responses:
+        '201':
+          description: Результат внесен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabResultResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [Laboratory]
+      summary: Список лабораторных результатов
+      parameters:
+        - in: query
+          name: patient_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: order_id
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: skip
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Список результатов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LabResultListResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/reports/doctor-workload:
+    get:
+      tags: [Reports]
+      summary: Отчет по загруженности врачей
+      parameters:
+        - in: query
+          name: date_from
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: date_to
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Сводка по загруженности
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DoctorWorkloadResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/reports/diagnoses:
+    get:
+      tags: [Reports]
+      summary: Статистика диагнозов (ТОП)
+      parameters:
+        - in: query
+          name: date_from
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: date_to
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 20
+      responses:
+        '200':
+          description: Статистика диагнозов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DiagnosesStatsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/reports/appointments:
+    get:
+      tags: [Reports]
+      summary: Статистика записей за период
+      parameters:
+        - in: query
+          name: date_from
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: date_to
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Сводка по статусам записей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppointmentsStatsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/reports/finance:
+    get:
+      tags: [Reports]
+      summary: Финансовая сводка по счетам за период
+      parameters:
+        - in: query
+          name: date_from
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: date_to
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Финансовая статистика
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FinanceStatsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    ValidationError:
+      description: Ошибка валидации входных данных
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Требуется аутентификация
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Недостаточно прав
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Конфликт состояния
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    LoginFormRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 1
+          maxLength: 100
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 100
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+
+    TokenResponse:
+      type: object
+      required: [access_token, token_type, expires_in]
+      properties:
+        access_token:
+          type: string
+        token_type:
+          type: string
+          enum: [bearer]
+        expires_in:
+          type: integer
+          minimum: 1
+
+    CurrentUserResponse:
+      type: object
+      required: [id, username, email, role, is_active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, doctor, registrar, patient]
+        is_active:
+          type: boolean
+
+    DoctorListItem:
+      type: object
+      required: [id, full_name, license_number, experience_years, specializations, monthly_salary, bonus_percent, is_active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        last_name:
+          type: string
+          nullable: true
+        first_name:
+          type: string
+          nullable: true
+        middle_name:
+          type: string
+          nullable: true
+        full_name:
+          type: string
+        license_number:
+          type: string
+        experience_years:
+          type: integer
+          minimum: 0
+        specializations:
+          type: array
+          items:
+            type: string
+        monthly_salary:
+          type: number
+          minimum: 0
+        bonus_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+        is_active:
+          type: boolean
+
+    DoctorListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DoctorListItem'
+        total:
+          type: integer
+          minimum: 0
+
+    DoctorCreateRequest:
+      type: object
+      required: [username, email, password, last_name, first_name, license_number, experience_years]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 100
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        middle_name:
+          type: string
+          maxLength: 100
+        license_number:
+          type: string
+          minLength: 3
+          maxLength: 50
+        experience_years:
+          type: integer
+          minimum: 0
+          maximum: 60
+        specialty_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          maxItems: 10
+        monthly_salary:
+          type: number
+          minimum: 0
+          maximum: 10000000
+          default: 0
+        bonus_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+          default: 0
+        is_active:
+          type: boolean
+          default: true
+
+    DoctorEmploymentUpdateRequest:
+      type: object
+      properties:
+        monthly_salary:
+          type: number
+          minimum: 0
+          maximum: 10000000
+        bonus_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+        is_active:
+          type: boolean
+
+    SpecialtyItem:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        name:
+          type: string
+
+    SpecialtyListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpecialtyItem'
+        total:
+          type: integer
+          minimum: 0
+
+    PatientCreateRequest:
+      type: object
+      required: [last_name, first_name, birth_date, gender]
+      properties:
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        middle_name:
+          type: string
+          maxLength: 100
+        birth_date:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [M, F, O]
+        phone:
+          type: string
+          pattern: '^\+?[0-9\-\(\)\s]{7,20}$'
+        email:
+          type: string
+          format: email
+        insurance_number:
+          type: string
+          maxLength: 50
+        address:
+          type: string
+          maxLength: 500
+
+    PatientResponse:
+      type: object
+      required: [id, last_name, first_name, birth_date, gender, is_active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        last_name:
+          type: string
+        first_name:
+          type: string
+        middle_name:
+          type: string
+          nullable: true
+        birth_date:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [M, F, O]
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          format: email
+          nullable: true
+        insurance_number:
+          type: string
+          nullable: true
+        address:
+          type: string
+          nullable: true
+        is_active:
+          type: boolean
+
+    PatientListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PatientResponse'
+        total:
+          type: integer
+          minimum: 0
+
+    PatientUpdateRequest:
+      type: object
+      properties:
+        last_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        first_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        middle_name:
+          type: string
+          maxLength: 100
+        birth_date:
+          type: string
+          format: date
+        gender:
+          type: string
+          enum: [M, F, O]
+        phone:
+          type: string
+          pattern: '^\+?[0-9\-\(\)\s]{7,20}$'
+        email:
+          type: string
+          format: email
+        insurance_number:
+          type: string
+          maxLength: 50
+        address:
+          type: string
+          maxLength: 500
+
+    ScheduleCreateRequest:
+      type: object
+      required: [doctor_id, weekday, start_time, end_time, slot_minutes]
+      properties:
+        doctor_id:
+          type: string
+          format: uuid
+        weekday:
+          type: integer
+          minimum: 1
+          maximum: 7
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        slot_minutes:
+          type: integer
+          enum: [15, 30, 60]
+        is_active:
+          type: boolean
+          default: true
+
+    ScheduleResponse:
+      type: object
+      required: [id, doctor_id, weekday, start_time, end_time, slot_minutes, is_active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        doctor_id:
+          type: string
+          format: uuid
+        weekday:
+          type: integer
+        start_time:
+          type: string
+          format: time
+        end_time:
+          type: string
+          format: time
+        slot_minutes:
+          type: integer
+          enum: [15, 30, 60]
+        is_active:
+          type: boolean
+
+    ScheduleListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleResponse'
+        total:
+          type: integer
+          minimum: 0
+
+    ScheduleSlotGenerateRequest:
+      type: object
+      required: [schedule_id, date_from, date_to]
+      properties:
+        schedule_id:
+          type: string
+          format: uuid
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+
+    ScheduleSlotResponse:
+      type: object
+      required: [id, schedule_id, start_at, end_at, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        schedule_id:
+          type: string
+          format: uuid
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [available, booked, blocked, cancelled]
+
+    ScheduleSlotGenerateResponse:
+      type: object
+      required: [created, slots]
+      properties:
+        created:
+          type: integer
+          minimum: 0
+        slots:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleSlotResponse'
+
+    ScheduleSlotListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleSlotResponse'
+        total:
+          type: integer
+          minimum: 0
+
+    ScheduleExceptionCreateRequest:
+      type: object
+      required: [doctor_id, date_from, date_to, reason]
+      properties:
+        doctor_id:
+          type: string
+          format: uuid
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 255
+
+    ScheduleExceptionResponse:
+      type: object
+      required: [id, doctor_id, date_from, date_to, reason]
+      properties:
+        id:
+          type: string
+          format: uuid
+        doctor_id:
+          type: string
+          format: uuid
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        reason:
+          type: string
+
+    AppointmentCreateRequest:
+      type: object
+      required: [patient_id, doctor_id, slot_id]
+      properties:
+        patient_id:
+          type: string
+          format: uuid
+        doctor_id:
+          type: string
+          format: uuid
+        slot_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          maxLength: 2000
+
+    AppointmentCancelRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          maxLength: 500
+
+    AppointmentRescheduleRequest:
+      type: object
+      required: [slot_id]
+      properties:
+        slot_id:
+          type: string
+          format: uuid
+
+    AppointmentResponse:
+      type: object
+      required: [id, patient_id, doctor_id, slot_id, status, created_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        patient_full_name:
+          type: string
+          nullable: true
+        doctor_id:
+          type: string
+          format: uuid
+        doctor_full_name:
+          type: string
+          nullable: true
+        slot_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [planned, confirmed, cancelled, completed, no_show]
+        created_at:
+          type: string
+          format: date-time
+
+    AppointmentListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AppointmentResponse'
+        total:
+          type: integer
+          minimum: 0
+
+    VisitCreateRequest:
+      type: object
+      required: [appointment_id, chief_complaint, exam_notes]
+      properties:
+        appointment_id:
+          type: string
+          format: uuid
+        chief_complaint:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        exam_notes:
+          type: string
+          minLength: 1
+          maxLength: 10000
+        treatment_plan:
+          type: string
+          maxLength: 10000
+
+    VisitCompleteRequest:
+      type: object
+      properties:
+        treatment_plan:
+          type: string
+          maxLength: 10000
+
+    VisitResponse:
+      type: object
+      required:
+        [
+          id,
+          appointment_id,
+          patient_id,
+          patient_full_name,
+          doctor_id,
+          doctor_full_name,
+          chief_complaint,
+          exam_notes,
+          visit_status
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        appointment_id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        patient_full_name:
+          type: string
+        doctor_id:
+          type: string
+          format: uuid
+        doctor_full_name:
+          type: string
+        chief_complaint:
+          type: string
+        exam_notes:
+          type: string
+        treatment_plan:
+          type: string
+          nullable: true
+        visit_status:
+          type: string
+          enum: [in_progress, completed, cancelled]
+        closed_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    VisitListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/VisitResponse'
+        total:
+          type: integer
+          minimum: 0
+
+    DiagnosisItem:
+      type: object
+      required: [icd10_code, is_primary]
+      properties:
+        icd10_code:
+          type: string
+          pattern: '^[A-Z][0-9]{2}(\.[0-9A-Z]{1,2})?$'
+        is_primary:
+          type: boolean
+        comment:
+          type: string
+          maxLength: 2000
+
+    DiagnosesCreateRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/DiagnosisItem'
+
+    DiagnosisResponse:
+      type: object
+      required: [id, icd10_code, is_primary]
+      properties:
+        id:
+          type: string
+          format: uuid
+        icd10_code:
+          type: string
+          pattern: '^[A-Z][0-9]{2}(\.[0-9A-Z]{1,2})?$'
+        is_primary:
+          type: boolean
+        comment:
+          type: string
+          maxLength: 2000
+          nullable: true
+
+    DiagnosesCreateResponse:
+      type: object
+      required: [visit_id, created, diagnoses]
+      properties:
+        visit_id:
+          type: string
+          format: uuid
+        created:
+          type: integer
+          minimum: 0
+        diagnoses:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosisResponse'
+
+    PrescriptionItem:
+      type: object
+      required: [medication_id, dosage, frequency, duration_days]
+      properties:
+        medication_id:
+          type: string
+          format: uuid
+        dosage:
+          type: string
+          pattern: '^\d+(\.\d+)?\s?(mg|ml|g|mcg)$'
+        frequency:
+          type: string
+          maxLength: 100
+        duration_days:
+          type: integer
+          minimum: 1
+          maximum: 365
+        instructions:
+          type: string
+          maxLength: 2000
+
+    PrescriptionsCreateRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/PrescriptionItem'
+
+    GenericCreateResult:
+      type: object
+      required: [visit_id, created]
+      properties:
+        visit_id:
+          type: string
+          format: uuid
+        created:
+          type: integer
+          minimum: 0
+
+    ReferralCreateItem:
+      type: object
+      required: [target_specialty_id, reason]
+      properties:
+        target_specialty_id:
+          type: integer
+          minimum: 1
+        target_doctor_id:
+          type: string
+          format: uuid
+          nullable: true
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        comment:
+          type: string
+          maxLength: 2000
+          nullable: true
+
+    ReferralsCreateRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/ReferralCreateItem'
+
+    ReferralResponse:
+      type: object
+      required:
+        [
+          id,
+          target_specialty_id,
+          reason,
+          status,
+          created_at
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        target_specialty_id:
+          type: integer
+          minimum: 1
+        target_doctor_id:
+          type: string
+          format: uuid
+          nullable: true
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [created, accepted, rejected, completed]
+        comment:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ReferralsCreateResponse:
+      type: object
+      required: [visit_id, created, referrals]
+      properties:
+        visit_id:
+          type: string
+          format: uuid
+        created:
+          type: integer
+          minimum: 0
+        referrals:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReferralResponse'
+
+    LabOrderCreateRequest:
+      type: object
+      required: [visit_id]
+      properties:
+        visit_id:
+          type: string
+          format: uuid
+
+    LabOrderResponse:
+      type: object
+      required: [id, visit_id, patient_id, ordered_by_doctor_id, status, ordered_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        visit_id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        ordered_by_doctor_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [created, in_progress, completed, cancelled]
+        ordered_at:
+          type: string
+          format: date-time
+
+    LabOrderItemCreateItem:
+      type: object
+      required: [test_type_id]
+      properties:
+        test_type_id:
+          type: string
+          format: uuid
+        priority:
+          type: string
+          enum: [normal, urgent, stat]
+          default: normal
+
+    LabOrderItemsCreateRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/LabOrderItemCreateItem'
+
+    LabOrderItemResponse:
+      type: object
+      required: [id, lab_order_id, test_type_id, priority]
+      properties:
+        id:
+          type: string
+          format: uuid
+        lab_order_id:
+          type: string
+          format: uuid
+        test_type_id:
+          type: string
+          format: uuid
+        priority:
+          type: string
+          enum: [normal, urgent, stat]
+
+    LabOrderItemsCreateResponse:
+      type: object
+      required: [lab_order_id, created, items]
+      properties:
+        lab_order_id:
+          type: string
+          format: uuid
+        created:
+          type: integer
+          minimum: 0
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabOrderItemResponse'
+
+    LabResultCreateRequest:
+      type: object
+      required: [lab_order_item_id, flag, validated_by_doctor_id]
+      properties:
+        lab_order_item_id:
+          type: string
+          format: uuid
+        value_text:
+          type: string
+          maxLength: 100
+          nullable: true
+        value_numeric:
+          type: number
+          format: double
+          nullable: true
+        unit:
+          type: string
+          maxLength: 30
+        reference_range:
+          type: string
+          maxLength: 50
+        flag:
+          type: string
+          enum: [low, normal, high, critical]
+        validated_by_doctor_id:
+          type: string
+          format: uuid
+      oneOf:
+        - required: [value_text]
+        - required: [value_numeric]
+
+    LabResultResponse:
+      type: object
+      required: [id, lab_order_item_id, lab_order_id, patient_id, resulted_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        lab_order_item_id:
+          type: string
+          format: uuid
+        lab_order_id:
+          type: string
+          format: uuid
+        patient_id:
+          type: string
+          format: uuid
+        value_text:
+          type: string
+          nullable: true
+        value_numeric:
+          type: number
+          format: double
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+        reference_range:
+          type: string
+          nullable: true
+        flag:
+          type: string
+          enum: [low, normal, high, critical]
+          nullable: true
+        resulted_at:
+          type: string
+          format: date-time
+        validated_by_doctor_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    LabResultListResponse:
+      type: object
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabResultResponse'
+        total:
+          type: integer
+          minimum: 0
+
+    DoctorWorkloadItem:
+      type: object
+      required: [doctor_id, doctor_name, appointments_count, completed_count, cancelled_count]
+      properties:
+        doctor_id:
+          type: string
+          format: uuid
+        doctor_name:
+          type: string
+        appointments_count:
+          type: integer
+          minimum: 0
+        completed_count:
+          type: integer
+          minimum: 0
+        cancelled_count:
+          type: integer
+          minimum: 0
+
+    DoctorWorkloadResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DoctorWorkloadItem'
+
+    DiagnosesStatsItem:
+      type: object
+      required: [icd10_code, title, total]
+      properties:
+        icd10_code:
+          type: string
+          pattern: '^[A-Z][0-9]{2}(\.[0-9A-Z]{1,2})?$'
+        title:
+          type: string
+        total:
+          type: integer
+          minimum: 0
+
+    DiagnosesStatsResponse:
+      type: object
+      required: [date_from, date_to, items]
+      properties:
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/DiagnosesStatsItem'
+
+    AppointmentsStatsResponse:
+      type: object
+      required: [date_from, date_to, total, planned, confirmed, completed, cancelled, no_show]
+      properties:
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        total:
+          type: integer
+          minimum: 0
+        planned:
+          type: integer
+          minimum: 0
+        confirmed:
+          type: integer
+          minimum: 0
+        completed:
+          type: integer
+          minimum: 0
+        cancelled:
+          type: integer
+          minimum: 0
+        no_show:
+          type: integer
+          minimum: 0
+
+    FinanceStatsResponse:
+      type: object
+      required: [date_from, date_to, invoices_count, total_amount, paid_amount, issued_amount]
+      properties:
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+        invoices_count:
+          type: integer
+          minimum: 0
+        total_amount:
+          type: number
+          format: double
+          minimum: 0
+        paid_amount:
+          type: number
+          format: double
+          minimum: 0
+        issued_amount:
+          type: number
+          format: double
+          minimum: 0
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, request_id]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: array
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                  issue:
+                    type: string
+            request_id:
+              type: string
+              format: uuid

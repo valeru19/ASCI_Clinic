@@ -1,0 +1,37 @@
+@startuml C4_Container_Clinic
+title C4 Level 2 - Container Diagram (АИС "Клиника")
+
+skinparam shadowing false
+skinparam componentStyle rectangle
+skinparam packageStyle rectangle
+skinparam defaultFontName Arial
+
+actor "Пациент" as patient
+actor "Регистратор" as registrar
+actor "Врач" as doctor
+actor "Администратор" as admin
+
+rectangle "АИС \"Клиника\" [System Boundary]" as boundary {
+  rectangle "Frontend SPA [Container]\nReact 18+" as web
+  rectangle "Backend API [Container]\nFastAPI (Python 3.11+)" as api
+  database "PostgreSQL [Container]\nPostgreSQL 15+" as db
+}
+
+rectangle "Сервис уведомлений [External]" as notify
+
+patient --> web : Работа через браузер
+registrar --> web : Работа через браузер
+doctor --> web : Работа через браузер
+admin --> web : Работа через браузер
+
+web --> api : REST/JSON over HTTPS
+api --> db : SQL (CRUD, транзакции)
+api --> notify : Отправка уведомлений
+
+note right of api
+  Backend реализует слоистую архитектуру:
+  Presentation -> Application(Service) ->
+  Domain -> Infrastructure(Repository)
+end note
+
+@enduml

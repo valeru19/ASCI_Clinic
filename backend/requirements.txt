@@ -1,0 +1,9 @@
+fastapi
+email-validator
+uvicorn[standard]
+sqlalchemy
+psycopg[binary]
+python-jose[cryptography]
+bcrypt>=4.0.0,<5
+python-multipart
+pytest

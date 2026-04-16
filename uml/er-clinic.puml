@@ -1,0 +1,271 @@
+@startuml ER_Clinic
+title ER Diagram - АИС "Клиника" (PostgreSQL 15+)
+
+hide circle
+skinparam linetype ortho
+skinparam shadowing false
+skinparam defaultFontName Arial
+
+entity "users" as users {
+  *id : uuid <<PK>>
+  --
+  username : varchar(100) <<UQ, NN>>
+  email : varchar(255) <<UQ, NN>>
+  password_hash : varchar(255) <<NN>>
+  role : user_role <<NN>>
+  is_active : boolean <<NN, default true>>
+  created_at : timestamptz <<NN>>
+}
+
+entity "patients" as patients {
+  *id : uuid <<PK>>
+  --
+  user_id : uuid <<FK, UQ>>
+  last_name : varchar(100) <<NN>>
+  first_name : varchar(100) <<NN>>
+  middle_name : varchar(100)>
+  birth_date : date <<NN>>
+  gender : gender_enum <<NN>>
+  phone : varchar(20)
+  insurance_number : varchar(50)
+  address : text
+  is_active : boolean <<NN, default true>>
+  created_at : timestamptz <<NN>>
+}
+
+entity "doctors" as doctors {
+  *id : uuid <<PK>>
+  --
+  user_id : uuid <<FK, UQ>>
+  license_number : varchar(50) <<UQ, NN>>
+  experience_years : smallint <<NN>>
+  is_active : boolean <<NN, default true>>
+  created_at : timestamptz <<NN>>
+}
+
+entity "specialties" as specialties {
+  *id : serial <<PK>>
+  --
+  name : varchar(120) <<UQ, NN>>
+}
+
+entity "doctor_specialties" as doctor_specialties {
+  *doctor_id : uuid <<PK, FK>>
+  *specialty_id : int <<PK, FK>>
+}
+
+entity "schedules" as schedules {
+  *id : uuid <<PK>>
+  --
+  doctor_id : uuid <<FK, NN>>
+  weekday : smallint <<NN, 1..7>>
+  start_time : time <<NN>>
+  end_time : time <<NN>>
+  slot_minutes : smallint <<NN, 15|30|60>>
+  is_active : boolean <<NN, default true>>
+}
+
+entity "schedule_slots" as schedule_slots {
+  *id : uuid <<PK>>
+  --
+  schedule_id : uuid <<FK, NN>>
+  start_at : timestamptz <<NN>>
+  end_at : timestamptz <<NN>>
+  status : slot_status <<NN>>
+}
+
+entity "schedule_exceptions" as schedule_exceptions {
+  *id : uuid <<PK>>
+  --
+  doctor_id : uuid <<FK, NN>>
+  date_from : date <<NN>>
+  date_to : date <<NN>>
+  reason : varchar(255) <<NN>>
+}
+
+entity "appointments" as appointments {
+  *id : uuid <<PK>>
+  --
+  slot_id : uuid <<FK, UQ, NN>>
+  patient_id : uuid <<FK, NN>>
+  doctor_id : uuid <<FK, NN>>
+  status : appointment_status <<NN>>
+  reason : text
+  created_at : timestamptz <<NN>>
+  updated_at : timestamptz <<NN>>
+}
+
+entity "visits" as visits {
+  *id : uuid <<PK>>
+  --
+  appointment_id : uuid <<FK, UQ, NN>>
+  chief_complaint : text <<NN>>
+  exam_notes : text <<NN>>
+  treatment_plan : text
+  visit_status : visit_status <<NN>>
+  closed_at : timestamptz
+}
+
+entity "icd10_codes" as icd10_codes {
+  *code : varchar(10) <<PK>>
+  --
+  title : varchar(255) <<NN>>
+}
+
+entity "diagnoses" as diagnoses {
+  *id : uuid <<PK>>
+  --
+  visit_id : uuid <<FK, NN>>
+  icd10_code : varchar(10) <<FK, NN>>
+  is_primary : boolean <<NN, default false>>
+  comment : text
+}
+
+entity "medications" as medications {
+  *id : uuid <<PK>>
+  --
+  name : varchar(150) <<NN>>
+  form : varchar(50)
+  strength : varchar(50)
+  atc_code : varchar(20)
+}
+
+entity "prescriptions" as prescriptions {
+  *id : uuid <<PK>>
+  --
+  visit_id : uuid <<FK, NN>>
+  medication_id : uuid <<FK, NN>>
+  dosage : varchar(100) <<NN>>
+  frequency : varchar(100) <<NN>>
+  duration_days : smallint <<NN, >0>>
+  instructions : text
+}
+
+entity "referrals" as referrals {
+  *id : uuid <<PK>>
+  --
+  visit_id : uuid <<FK, NN>>
+  target_specialty_id : int <<FK, NN>>
+  reason : text <<NN>>
+  status : varchar(20) <<NN>>
+}
+
+entity "lab_test_types" as lab_test_types {
+  *id : uuid <<PK>>
+  --
+  code : varchar(30) <<UQ, NN>>
+  name : varchar(150) <<NN>>
+  unit : varchar(30)
+  reference_range : varchar(100)
+}
+
+entity "lab_orders" as lab_orders {
+  *id : uuid <<PK>>
+  --
+  visit_id : uuid <<FK, NN>>
+  patient_id : uuid <<FK, NN>>
+  ordered_by_doctor_id : uuid <<FK, NN>>
+  status : lab_order_status <<NN>>
+  ordered_at : timestamptz <<NN>>
+}
+
+entity "lab_order_items" as lab_order_items {
+  *id : uuid <<PK>>
+  --
+  lab_order_id : uuid <<FK, NN>>
+  test_type_id : uuid <<FK, NN>>
+  priority : varchar(20) <<NN>>
+}
+
+entity "lab_results" as lab_results {
+  *id : uuid <<PK>>
+  --
+  lab_order_item_id : uuid <<FK, UQ, NN>>
+  value_text : varchar(100)
+  value_numeric : numeric(10,2)
+  unit : varchar(30)
+  reference_range : varchar(50)
+  flag : varchar(10)
+  resulted_at : timestamptz <<NN>>
+  validated_by_doctor_id : uuid <<FK>>
+}
+
+entity "services" as services {
+  *id : uuid <<PK>>
+  --
+  code : varchar(30) <<UQ, NN>>
+  name : varchar(150) <<NN>>
+  price : numeric(12,2) <<NN>>
+  is_active : boolean <<NN, default true>>
+}
+
+entity "invoices" as invoices {
+  *id : uuid <<PK>>
+  --
+  patient_id : uuid <<FK, NN>>
+  appointment_id : uuid <<FK>>
+  status : invoice_status <<NN>>
+  total_amount : numeric(12,2) <<NN>>
+  issued_at : timestamptz <<NN>>
+  due_at : timestamptz
+}
+
+entity "invoice_items" as invoice_items {
+  *id : uuid <<PK>>
+  --
+  invoice_id : uuid <<FK, NN>>
+  service_id : uuid <<FK, NN>>
+  qty : int <<NN, >0>>
+  unit_price : numeric(12,2) <<NN>>
+  total_price : numeric(12,2) <<NN>>
+}
+
+entity "audit_log" as audit_log {
+  *id : bigint <<PK>>
+  --
+  table_name : varchar(100) <<NN>>
+  record_id : uuid <<NN>>
+  operation : varchar(10) <<NN>>
+  changed_by : uuid <<FK>>
+  changed_at : timestamptz <<NN>>
+  before_data : jsonb
+  after_data : jsonb
+}
+
+users ||--o| patients : user_id
+users ||--o| doctors : user_id
+doctors ||--o{ doctor_specialties : doctor_id
+specialties ||--o{ doctor_specialties : specialty_id
+
+doctors ||--o{ schedules : doctor_id
+schedules ||--o{ schedule_slots : schedule_id
+doctors ||--o{ schedule_exceptions : doctor_id
+
+schedule_slots ||--o| appointments : slot_id
+patients ||--o{ appointments : patient_id
+doctors ||--o{ appointments : doctor_id
+
+appointments ||--o| visits : appointment_id
+visits ||--o{ diagnoses : visit_id
+icd10_codes ||--o{ diagnoses : icd10_code
+visits ||--o{ prescriptions : visit_id
+medications ||--o{ prescriptions : medication_id
+visits ||--o{ referrals : visit_id
+specialties ||--o{ referrals : target_specialty_id
+
+visits ||--o{ lab_orders : visit_id
+patients ||--o{ lab_orders : patient_id
+doctors ||--o{ lab_orders : ordered_by_doctor_id
+lab_orders ||--o{ lab_order_items : lab_order_id
+lab_test_types ||--o{ lab_order_items : test_type_id
+lab_order_items ||--o| lab_results : lab_order_item_id
+doctors ||--o{ lab_results : validated_by_doctor_id
+
+patients ||--o{ invoices : patient_id
+appointments ||--o{ invoices : appointment_id
+invoices ||--o{ invoice_items : invoice_id
+services ||--o{ invoice_items : service_id
+
+users ||--o{ audit_log : changed_by
+
+@enduml
