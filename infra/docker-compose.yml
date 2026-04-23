@@ -27,6 +27,9 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://clinic_user:clinic_pass@db:5432/clinic
       CORS_ALLOW_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      CORS_ALLOW_ORIGIN_REGEX: '^https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$'
+      LOG_LEVEL: INFO
+      LOG_FILE_PATH: /app/logs/app.log
     ports:
       - "8000:8000"
     depends_on:

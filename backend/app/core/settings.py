@@ -19,6 +19,11 @@ class Settings:
         ).split(",")
         if origin.strip()
     ]
+    cors_allow_origin_regex: str | None = (
+        os.getenv("CORS_ALLOW_ORIGIN_REGEX", "").strip() or None
+    )
+    log_level: str = os.getenv("LOG_LEVEL", "INFO").upper()
+    log_file_path: str = os.getenv("LOG_FILE_PATH", "/app/logs/app.log")
 
 
 settings = Settings()

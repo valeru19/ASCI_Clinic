@@ -128,6 +128,9 @@ CREATE TABLE IF NOT EXISTS clinic.referrals (
 
 - Frontend использует `VITE_API_BASE_URL` (по умолчанию: `http://localhost:8000/api/v1`).
 - Backend включает CORS для `http://localhost:5173` и `http://127.0.0.1:5173`.
+- Для dev-запуска frontend с другого устройства в LAN (например, MacBook по `http://192.168.x.x:5173`) включен `CORS_ALLOW_ORIGIN_REGEX` в `infra/docker-compose.yml`.
+- Для диагностики ошибок backend возвращает заголовок/поле `X-Request-ID` / `request_id`; frontend пишет детальный лог в консоль (`[httpRequest] request failed`) с методом, URL, статусом и деталями ответа.
+- Backend пишет структурированные JSON-логи в `/app/logs/app.log` (в контейнере `clinic-backend`); при сбое ищите запись по `request_id`, там есть метод, путь, query, статус, duration и traceback.
 - Frontend реализован по слоистой структуре `app/pages/widgets/features/entities/shared`.
 - В UI добавлены плавные переходы, toast-уведомления и сохранение настроек таблиц в `localStorage`.
 - Добавлен кадровый контур врачей: создание врача, список врачей, просмотр и управление их записями (перенос/отмена).
