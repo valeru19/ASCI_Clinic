@@ -48,3 +48,5 @@ def update_doctor_employment(
     service: DoctorService = Depends(get_doctor_service),
 ) -> DoctorListItem:
     return service.update_employment(doctor_id, payload, current_user)
+
+def update_docters(): ...
